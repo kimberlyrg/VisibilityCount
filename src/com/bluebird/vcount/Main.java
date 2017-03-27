@@ -8,16 +8,22 @@ import java.util.Random;
 
 public class Main {
 
-    private static ArrayList<Bar> bars = new ArrayList<>();
+    private static ArrayList<Bar> bars = new ArrayList<>(50);
     private static boolean onDebug = false;
+    private static final int DEBUG_COUNT = 100000;
+    private static long readTime = 0;
+    private static long parseTime = 0;
+    private static long writeFormatTime = 0;
+    private static long writeTime = 0;
+    private static long calculatedTotal = 0;
 
     static class Bar {
 
-        private Integer count = 0;
-        private final Integer xValue;
-        private final Double yValue;
+        private int count = 0;
+        private final double xValue;
+        private final double yValue;
 
-        public Bar(Integer xValue, Double yValue) {
+        public Bar(double xValue, double yValue) {
             this.xValue = xValue;
             this.yValue = yValue;
         }
@@ -31,15 +37,15 @@ public class Main {
             count++;
         }
 
-        Integer getXValue() {
+        double getXValue() {
             return xValue;
         }
 
-        Double getYValue() {
+        double getYValue() {
             return yValue;
         }
 
-        public Integer getConnectionCount() {
+        int getConnectionCount() {
             return count;
         }
     }
@@ -48,23 +54,24 @@ public class Main {
         show("Calculating visibility..");
         int total = bars.size();
         int count = 0;
+        calculatedTotal = System.currentTimeMillis();
         while (count < total) {
             Bar present = bars.get(count);
             int temp = count + 1;
             boolean isVisible;
-            double ta = Double.parseDouble(present.getXValue() + ".0");
+            double ta = present.getXValue();
             double ya = present.getYValue();
             //   System.out.println("Checking for (" + ta + "," + ya + ") "+count);
             Bar intermediate = present;
             while (temp < total) {
                 Bar target = bars.get(temp);
-                double tb = Double.parseDouble(target.getXValue() + ".0");
+                double tb = target.getXValue();
                 double yb = target.getYValue();
                 if (temp - 1 == count) {
                     present.connectTo(temp);
                     intermediate = target;
                 } else {
-                    double tc = Double.parseDouble(intermediate.getXValue() + ".0");
+                    double tc = intermediate.getXValue();
                     double yc = intermediate.getYValue();
                     double div = (ya - yb) * ((tb - tc) / (tb - ta));
                //     System.out.println("ya : "+ya+"\tyb : "+yb+"\ttb : "+tb+"\ttc : "+tc+"\tta : "+ta);
@@ -84,6 +91,7 @@ public class Main {
             }
             count++;
         }
+        calculatedTotal = System.currentTimeMillis() - calculatedTotal;
         show("Visibility calculated..");
     }
 
@@ -96,9 +104,12 @@ public class Main {
         FileInputStream fis = new FileInputStream(file);
         byte [] buffer = new byte[(int)file.length()];
         show("Reading file..");
+        readTime = System.currentTimeMillis();
         fis.read(buffer);
+        readTime = (System.currentTimeMillis() - readTime);
         fis.close();
         show("Parsing input..");
+        parseTime = System.currentTimeMillis();
         String input = new String(buffer, StandardCharsets.UTF_8);
         int count = 1;
         for(String read : input.split("\n")) {
@@ -106,21 +117,27 @@ public class Main {
             bars.add(new Bar(count, value));
             count++;
         }
+        parseTime = System.currentTimeMillis() - parseTime;
         show("Parsing complete..");
+        show("Values found : " + bars.size() + "..");
     }
 
     private static void writeOutput(String file) throws IOException {
         final int[] count = {1};
         show("Preparing write..");
+        writeFormatTime = System.currentTimeMillis();
         StringBuilder sb = new StringBuilder();
-        bars.forEach(bar-> sb.append(String.format("Bar : %3d\t\tValue : %12g\t\t", (count[0]++), bar.getYValue()))
+        bars.forEach(bar -> sb.append(String.format("Bar : %3d\t\tValue : %12.6f\t\t", (count[0]++), bar.getYValue()))
                 .append("Nodes : ")
                 .append(bar.getConnectionCount())
                 .append("\n"));
+        writeFormatTime = System.currentTimeMillis() - writeFormatTime;
         FileOutputStream fileOutputStream = new FileOutputStream(new File(file));
         show("Writing out..");
+        writeTime = System.currentTimeMillis();
         fileOutputStream.write(sb.toString().getBytes());
         fileOutputStream.close();
+        writeTime = System.currentTimeMillis() - writeTime;
         show("Writing complete..");
     }
 
@@ -129,12 +146,13 @@ public class Main {
         Random r = new Random();
         show("Generating random input..");
         StringBuilder sb = new StringBuilder();
-        while(count<1000000){
+        while (count < DEBUG_COUNT) {
             sb.append(r.nextInt(100000))
                     .append(r.nextDouble())
                     .append("\n");
             count++;
         }
+        bars.ensureCapacity(DEBUG_COUNT);
         PrintWriter writer = new PrintWriter("debug_in");
         show("Creating input file..");
         writer.print(sb);
@@ -159,6 +177,17 @@ public class Main {
         System.out.println("Usage : java -jar VisibilityCount.jar input_file output_file");
     }
 
+    private static void showStats() {
+        show("Stats");
+        show("=====");
+        show("Total values : " + bars.size() + "..");
+        show("Reading                =>\tTotal : " + readTime + "ms\tAverage : " + (float) readTime / bars.size() + "ms");
+        show("Parsing                =>\tTotal : " + parseTime + "ms\tAverage : " + (float) parseTime / bars.size() + "ms");
+        show("Visibility calculation =>\tTotal : " + calculatedTotal + "ms\tAverage : " + (float) calculatedTotal / bars.size() + "ms");
+        show("Output formatting      =>\tTotal : " + writeFormatTime + "ms\tAverage : " + (float) writeFormatTime / bars.size() + "ms");
+        show("Writing                =>\tTotal : " + writeTime + "ms\tAverage : " + (float) writeTime / bars.size() + "ms");
+    }
+
     public static void main(String[] args) {
         if(onDebug){
             try {
@@ -168,6 +197,7 @@ public class Main {
                 parseInput("debug_in");
                 calculateVisibility();
                 writeOutput("debug_out");
+                showStats();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -184,8 +214,9 @@ public class Main {
                     parseInput(args[0]);
                     calculateVisibility();
                     writeOutput(args[1]);
+                    showStats();
                 } catch (IOException e) {
-                    System.err.println("Unable to parse input! Fatal error!\n");
+                    System.err.println("Unable to complete! Fatal error!\n");
                     e.printStackTrace();
                 }
             }
