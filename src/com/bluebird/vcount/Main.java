@@ -33,6 +33,11 @@ public class Main {
             incrementCount();
         }
 
+        void connectTo(Bar bar){
+            bar.incrementCount();
+            incrementCount();
+        }
+
         void incrementCount(){
             count++;
         }
@@ -62,27 +67,28 @@ public class Main {
             double ta = present.getXValue();
             double ya = present.getYValue();
             //   System.out.println("Checking for (" + ta + "," + ya + ") "+count);
-            Bar intermediate = present;
+            double tc = present.getXValue();
+            double yc = present.getYValue();
             while (temp < total) {
                 Bar target = bars.get(temp);
-                double tb = target.getXValue();
-                double yb = target.getYValue();
                 if (temp - 1 == count) {
-                    present.connectTo(temp);
-                    intermediate = target;
+                    present.connectTo(target);
+                    tc = target.getXValue();
+                    yc = target.getYValue();
                 } else {
-                    double tc = intermediate.getXValue();
-                    double yc = intermediate.getYValue();
-                    double div = (ya - yb) * ((tb - tc) / (tb - ta));
+                    double tb = target.getXValue();
+                    double yb = target.getYValue();
+                    double div = ((ya - yb) * ((tb - tc) / (tb - ta))) + yb;
                //     System.out.println("ya : "+ya+"\tyb : "+yb+"\ttb : "+tb+"\ttc : "+tc+"\tta : "+ta);
-                    isVisible = (yc < (div + yb));
+                    isVisible = (yc < div);
                     if (isVisible) {
-                        present.connectTo(temp);
+                        present.connectTo(target);
                           //  System.out.println("\tConnected to : ("+tb+","+yb+") "+temp);
                            //  System.out.println(count+"->"+temp);
-                        if (yb > intermediate.getYValue()) {
+                        if (yb > yc) {
                              // System.out.println("Reassigned im to " + target.getXValue() + "," + target.getYValue());
-                            intermediate = target;
+                            tc = target.getXValue();
+                            yc = target.getYValue();
                         }
                     }
 
