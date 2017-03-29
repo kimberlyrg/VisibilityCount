@@ -1,8 +1,0 @@
-<component name="ArtifactManager">
-  <artifact type="jar" build-on-make="true" name="VisibilityCount:jar">
-    <output-path>$PROJECT_DIR$/out/artifacts/VisibilityCount_jar</output-path>
-    <root id="archive" name="VisibilityCount.jar">
-      <element id="module-output" name="VisibilityCount" />
-    </root>
-  </artifact>
-</component>
