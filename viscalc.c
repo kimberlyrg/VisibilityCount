@@ -15,18 +15,19 @@ void calculateVisibility(Bar *start){
 		int isVisible = 0;
 		double ta = present->xValue;
 		double ya = present->yValue;
-		Bar *intermediate = present;
+		
+		double tc = present->xValue;
+		double yc = present->yValue;
 		while(target!=NULL){
-			double tb = target->xValue;
-			double yb = target->yValue;
 			if(target==present->next){
 				present->count++;
 				target->count++;
-				intermediate = target;
+				tc = target->xValue;
+				yc = target->yValue;
 			}
 			else{
-				double tc = intermediate->xValue;
-				double yc = intermediate->yValue;
+				double tb = target->xValue;
+				double yb = target->yValue;
 				
 				double div = ((ya - yb) * ((tb - tc) / (tb - ta))) + yb;
 				isVisible = yc < div;
@@ -34,8 +35,11 @@ void calculateVisibility(Bar *start){
 					present->count++;
 					target->count++;
 
-					if(yb > intermediate->yValue)
-						intermediate = target;
+					if(yb > yc){
+						tc = target->xValue;
+						yc = target->yValue;
+					}
+						
 				}
 			}
 			target = target->next;
