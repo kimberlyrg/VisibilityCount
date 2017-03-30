@@ -58,9 +58,6 @@ void readFromFile(Bar **start, char *fileName){
 	char line[256];
 	printf("\nParsing file..");
 	while(fgets(line, sizeof(line), f)){
-		if(line=="")
-			continue;
-
 		temp = atof(line);
 		tempbar = (Bar *)malloc(sizeof(Bar));
 		if(tempbar==NULL){
