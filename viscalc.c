@@ -1,5 +1,6 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include<time.h>
 
 typedef struct Bar {
 	double xValue;
@@ -106,6 +107,8 @@ void printUsage(){
 }
 
 int main(int argc, char *argv[]){
+	clock_t timer;
+	double seconds;
 	if(argc!=3){
 		printf("\nError : Wrong number of inputs!");
 		printUsage();
@@ -114,13 +117,22 @@ int main(int argc, char *argv[]){
 	setbuf(stdout, NULL);
 	printf("\nReading file..");
 	Bar *start;
+	timer = clock();
 	readFromFile(&start, argv[1]);
+	seconds = ((double) (clock() - timer)) / CLOCKS_PER_SEC;
+	printf("\nReading took %g seconds..", seconds);
 
 	printf("\nCalculating visibility..");
+	timer = clock();
 	calculateVisibility(start);
+	seconds = ((double) (clock() - timer)) / CLOCKS_PER_SEC;
+	printf("\nCalculation took %g seconds..", seconds);
 
 	printf("\nWriting out to file..");
+	timer = clock();
 	writeToFile(start, argv[2]);
+	seconds = ((double) (clock() - timer)) / CLOCKS_PER_SEC;
+	printf("\nWriting took %g seconds..", seconds);
 
 	printf("\nCompleted successfully!\n");
 }
