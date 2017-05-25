@@ -69,6 +69,7 @@ void readFromFile(Bar **start, char *fileName){
 		tempbar->xValue = c;
 		tempbar->yValue = temp;
 		tempbar->count = 0;
+		tempbar->next = NULL;
 
 		if(prevbar)
 			prevbar->next = tempbar;
