@@ -136,11 +136,7 @@ void printUsage(){
 }
 
 void freeBars(Bar *head){
-	while(head!=NULL){
-		Bar *backup = head;
-		head = head->next;
-		free(backup);
-	}
+	free(head);
 }
 
 void generateRandomAndTest(int);
