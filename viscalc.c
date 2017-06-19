@@ -10,8 +10,20 @@ typedef struct Bar {
 	struct Bar *next;
 } Bar;
 
-void calculateVisibility(Bar *start){
+long calcuateTotalIterations(long count){
+	long ret = 0;
+	while(count>1){
+		ret += (count-1);
+		count--;
+	}
+	return ret;
+}
+
+void calculateVisibility(Bar *start, long count){
 	Bar *present = start;
+	long c = 0;
+	long prevpercn = 0;
+	count = calcuateTotalIterations(count);
 	while(present!=NULL){
 		Bar *target = present->next;
 		double ta = present->xValue;
@@ -43,12 +55,18 @@ void calculateVisibility(Bar *start){
 				}
 			}
 			target = target->next;
+			long percn = ((++c)*100)/count;
+			if(percn!=prevpercn){
+				printf("\rCalculating visibility : %ld%% complete..", percn);
+				prevpercn = percn;
+			}
 		}
 		present = present->next;
 	}
 }
 
-void readFromFile(Bar **start, char *fileName){
+
+void readFromFile(Bar **start, char *fileName, long *count){
 	FILE *f = fopen(fileName, "rb");
 	if(f==NULL){
 		printf("\nError : Unable to open input file %s!\n", fileName);
@@ -56,9 +74,8 @@ void readFromFile(Bar **start, char *fileName){
 	}
 	double temp;
 	Bar *tempbar, *prevbar = NULL;
-	double c = 1;
+	long c = 1;
 	char line[256];
-	printf("\nParsing file..");
 	while(fgets(line, sizeof(line), f)){
 		temp = atof(line);
 		tempbar = (Bar *)malloc(sizeof(Bar));
@@ -86,7 +103,7 @@ void readFromFile(Bar **start, char *fileName){
 		exit(3);
 	}
 	fclose(f);
-	printf("\nTotal %.0f values read..", --c);
+	*count = c;
 }
 
 void writeToFile(Bar *start, char *fileName){
@@ -134,14 +151,15 @@ int main(int argc, char *argv[]){
 	setbuf(stdout, NULL);
 	printf("\nReading file..");
 	Bar *start;
+	long count = 0;
 	timer = clock();
-	readFromFile(&start, argv[1]);
+	readFromFile(&start, argv[1], &count);
 	seconds = ((double) (clock() - timer)) / CLOCKS_PER_SEC;
-	printf("\nReading took %g seconds..", seconds);
+	printf("\rReading took %g seconds..", seconds);
 
 	printf("\nCalculating visibility..");
 	timer = clock();
-	calculateVisibility(start);
+	calculateVisibility(start, count);
 	seconds = ((double) (clock() - timer)) / CLOCKS_PER_SEC;
 	printf("\nCalculation took %g seconds..", seconds);
 
@@ -149,7 +167,7 @@ int main(int argc, char *argv[]){
 	timer = clock();
 	writeToFile(start, argv[2]);
 	seconds = ((double) (clock() - timer)) / CLOCKS_PER_SEC;
-	printf("\nWriting took %g seconds..", seconds);
+	printf("\rWriting took %g seconds..", seconds);
 
 	printf("\nReleasing memory..");
 	freeBars(start);
