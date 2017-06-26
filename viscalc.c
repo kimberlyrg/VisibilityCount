@@ -125,6 +125,7 @@ void freeBars(Bar *head){
 }
 
 void sortList(Bar *list){
+    printf("\rPreparing graphs (sorting data)..");
 	Bar *temp = list;
 	while(temp->next!=NULL){
 		Bar *t2 = temp->next;
@@ -155,6 +156,7 @@ typedef struct Data{
 } Data;
 
 void calculateVisibilityFrequency(Bar *head, Data **dataHead){
+    printf("\rPreparing graphs (calculating frequency)..");
 	Bar *temp = head;
 	Data * newHead = NULL, *prev = NULL, *aVal = NULL;
 	while(temp!=NULL){
@@ -186,32 +188,64 @@ void freeData(Data *head){
 	}
 }
 
+
+double getDiff(clock_t start){
+    return ((double) (clock() - start)) / CLOCKS_PER_SEC;
+}
+
 void plot(Bar *head, long long count){
+    clock_t start = clock();
 	sortList(head);
 	Data *freqHead;
 	calculateVisibilityFrequency(head, &freqHead);
+    printf("\rGraphs prepared (%g seconds)..                   ", getDiff(start));
+    int choice = 1;
 
+    while(choice>0 && choice<3) {
+        printf("\nSelect the graph you want to view : ");
+        printf("\n1. log(Pk) vs log(1/k)");
+        printf("\n2. log(Pk) vs k");
+        printf("\nYour choice : ");
+        scanf("%d", &choice);
+
+        if (choice == 1 || choice == 2) {
 #ifdef WIN32
-	FILE * gnuplotPipe = _popen("gnuplot -persist", "w");
+            FILE *gnuplotPipe = _popen("gnuplot -p", "w");
 #else
-    FILE * gnuplotPipe = popen("gnuplot -persist", "w");
+            FILE * gnuplotPipe = popen("gnuplot -p", "w");
 #endif
-    
-    fprintf(gnuplotPipe, "plot '-' \n");
-	Data *temp = freqHead;
-	while(temp!=NULL){
-		//		printf("\nDegree : %d Nodes %d",temp->x, temp->y);
-		double pk = (double)temp->y/count;
-		double onebyk = (double)1/temp->x;
-		//		printf("x %d y %d logx %f logpk %f\n", temp->x, temp->y, log(1/temp->x), log(pk));
+            fprintf(gnuplotPipe, "set ylabel \"log(Pk)\"");
+            if(choice==1) {
+                fprintf(gnuplotPipe, "\nset xlabel \"log(1/k)\"");
+                fprintf(gnuplotPipe, "\nset title \"log(Pk) vs log(1/k)\"");
+            }
+            else {
+                fprintf(gnuplotPipe, "\nset xlabel \"k\"");
+                fprintf(gnuplotPipe, "\nset title \"log(Pk) vs k\"");
+            }
 
-		//		fprintf(gnuplotPipe, "%f %f\n", log2((double)1/temp->x), log2(pk));
-		//		fprintf(gnuplotPipe, "%d %f\n", temp->x, pk);
+            fprintf(gnuplotPipe, "\nplot '-' \n");
+            Data *temp = freqHead;
+            while (temp != NULL) {
+                //		printf("\nDegree : %d Nodes %d",temp->x, temp->y);
+                double pk = (double) temp->y / count;
+                double x = log((double) 1 / temp->x);
+                //		printf("x %d y %d logx %f logpk %f\n", temp->x, temp->y, log(1/temp->x), log(pk));
 
-		fprintf(gnuplotPipe, "%d %f\n", temp->x, log(pk));
-		temp = temp->next;
-	}
-	fprintf(gnuplotPipe, "e");
+                //		fprintf(gnuplotPipe, "%f %f\n", log2((double)1/temp->x), log2(pk));
+                //		fprintf(gnuplotPipe, "%d %f\n", temp->x, pk);
+
+                if(choice==1)
+                    fprintf(gnuplotPipe, "%lf %lf\n", x, log(pk));
+                else
+                    fprintf(gnuplotPipe, "%d %lf\n", temp->x, log(pk));
+
+                temp = temp->next;
+            }
+            fprintf(gnuplotPipe, "e");
+            fclose(gnuplotPipe);
+        }
+    }
 	freeData(freqHead);
 	//	fprintf(gnuplotPipe, " with lines");
 }
@@ -237,21 +271,22 @@ int main(int argc, char *argv[]){
 	long long count = 0;
 	timer = clock();
 	readFromFile(&start, argv[1], &count);
-	seconds = ((double) (clock() - timer)) / CLOCKS_PER_SEC;
+	seconds = getDiff(timer);
 	printf("\rReading completed (%g seconds)..", seconds);
 
 	printf("\nCalculating visibility..");
 	timer = clock();
 	calculateVisibility(start, count);
-	seconds = ((double) (clock() - timer)) / CLOCKS_PER_SEC;
+	seconds = getDiff(timer);
 	printf("\rVisibility calculated (%g seconds)..", seconds);
 
 	printf("\nWriting out to file..");
 	timer = clock();
 	writeToFile(start, argv[2]);
-	seconds = ((double) (clock() - timer)) / CLOCKS_PER_SEC;
+	seconds = getDiff(timer);
 	printf("\rWriting completed (%g seconds)..", seconds);
 
+    printf("\nPreparing graphs..");
 	plot(start, count);
 
 	printf("\nReleasing memory..");
