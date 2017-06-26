@@ -191,9 +191,13 @@ void plot(Bar *head, long long count){
 	Data *freqHead;
 	calculateVisibilityFrequency(head, &freqHead);
 
-	FILE * gnuplotPipe = popen("gnuplot -persistent", "w");
-
-	fprintf(gnuplotPipe, "plot '-' \n");
+#ifdef WIN32
+	FILE * gnuplotPipe = _popen("gnuplot -persist", "w");
+#else
+    FILE * gnuplotPipe = popen("gnuplot -persist", "w");
+#endif
+    
+    fprintf(gnuplotPipe, "plot '-' \n");
 	Data *temp = freqHead;
 	while(temp!=NULL){
 		//		printf("\nDegree : %d Nodes %d",temp->x, temp->y);
