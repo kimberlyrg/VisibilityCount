@@ -3,7 +3,6 @@
 #include<time.h>
 #include<string.h>
 #include<math.h>
-#include<pthread.h>
 
 typedef struct Bar {
 	double xValue;
@@ -12,20 +11,11 @@ typedef struct Bar {
 	struct Bar *next;
 } Bar;
 
-typedef struct Calcinfo {
-	Bar *start;
-	long long count;
-	long long upto;
-	int tid;
-} Calcinfo;
-
-void *calculateVisibility(void *info){
-	Calcinfo *calcinfo = (Calcinfo *)info;
-	Bar *present = calcinfo->start;
-	long long upto = calcinfo->upto;
+void calculateVisibility(Bar *start, long long count){
+	Bar *present = start;
 	long long c = 0;
-	//	int prevpercn = 0;
-	while(present!=NULL && c<upto){
+	int prevpercn = 0;
+	while(present!=NULL){
 		Bar *target = present->next;
 		double ta = present->xValue;
 		double ya = present->yValue;
@@ -58,11 +48,12 @@ void *calculateVisibility(void *info){
 			target = target->next;	
 		}
 		present = present->next;
-		c++;
+		int percn = ((++c)*100)/count;
+		if(percn!=prevpercn){
+			printf("\rCalculating visibility (%d%% complete)..", percn);
+			prevpercn = percn;
+		}
 	}
-	printf("\nThread %d done( values calculated : %lld, given : %lld)", calcinfo->tid, c, upto);
-	free(info);
-	return NULL;
 }
 
 
@@ -103,7 +94,7 @@ void readFromFile(Bar **start, char *fileName, long long *count){
 		exit(3);
 	}
 	fclose(f);
-	*count = --c;
+	*count = c;
 }
 
 void writeToFile(Bar *start, char *fileName){
@@ -134,7 +125,7 @@ void freeBars(Bar *head){
 }
 
 void sortList(Bar *list){
-	printf("\rPreparing graphs (sorting data)..");
+    printf("\rPreparing graphs (sorting data)..");
 	Bar *temp = list;
 	while(temp->next!=NULL){
 		Bar *t2 = temp->next;
@@ -165,7 +156,7 @@ typedef struct Data{
 } Data;
 
 void calculateVisibilityFrequency(Bar *head, Data **dataHead){
-	printf("\rPreparing graphs (calculating frequency)..");
+    printf("\rPreparing graphs (calculating frequency)..");
 	Bar *temp = head;
 	Data * newHead = NULL, *prev = NULL, *aVal = NULL;
 	while(temp!=NULL){
@@ -199,117 +190,64 @@ void freeData(Data *head){
 
 
 double getDiff(clock_t start){
-	return ((double) (clock() - start)) / CLOCKS_PER_SEC;
+    return ((double) (clock() - start)) / CLOCKS_PER_SEC;
 }
 
 void plot(Bar *head, long long count){
-	clock_t start = clock();
+    clock_t start = clock();
 	sortList(head);
 	Data *freqHead;
 	calculateVisibilityFrequency(head, &freqHead);
-	printf("\rGraphs prepared (%g seconds)..                   ", getDiff(start));
-	int choice = 1;
+    printf("\rGraphs prepared (%g seconds)..                   ", getDiff(start));
+    int choice = 1;
 
-	while(choice>0 && choice<3) {
-		printf("\nSelect the graph you want to view : ");
-		printf("\n1. log(Pk) vs log(1/k)");
-		printf("\n2. log(Pk) vs k");
-		printf("\nYour choice : ");
-		scanf("%d", &choice);
+    while(choice>0 && choice<3) {
+        printf("\nSelect the graph you want to view : ");
+        printf("\n1. log(Pk) vs log(1/k)");
+        printf("\n2. log(Pk) vs k");
+        printf("\nYour choice : ");
+        scanf("%d", &choice);
 
-		if (choice == 1 || choice == 2) {
+        if (choice == 1 || choice == 2) {
 #ifdef WIN32
-			FILE *gnuplotPipe = _popen("gnuplot -p", "w");
+            FILE *gnuplotPipe = _popen("gnuplot -p", "w");
 #else
-			FILE * gnuplotPipe = popen("gnuplot -p", "w");
+            FILE * gnuplotPipe = popen("gnuplot -p", "w");
 #endif
-			fprintf(gnuplotPipe, "set ylabel \"log(Pk)\"");
-			if(choice==1) {
-				fprintf(gnuplotPipe, "\nset xlabel \"log(1/k)\"");
-				fprintf(gnuplotPipe, "\nset title \"log(Pk) vs log(1/k)\"");
-			}
-			else {
-				fprintf(gnuplotPipe, "\nset xlabel \"k\"");
-				fprintf(gnuplotPipe, "\nset title \"log(Pk) vs k\"");
-			}
+            fprintf(gnuplotPipe, "set ylabel \"log(Pk)\"");
+            if(choice==1) {
+                fprintf(gnuplotPipe, "\nset xlabel \"log(1/k)\"");
+                fprintf(gnuplotPipe, "\nset title \"log(Pk) vs log(1/k)\"");
+            }
+            else {
+                fprintf(gnuplotPipe, "\nset xlabel \"k\"");
+                fprintf(gnuplotPipe, "\nset title \"log(Pk) vs k\"");
+            }
 
-			fprintf(gnuplotPipe, "\nplot '-' \n");
-			Data *temp = freqHead;
-			while (temp != NULL) {
-				//		printf("\nDegree : %d Nodes %d",temp->x, temp->y);
-				double pk = (double) temp->y / count;
-				double x = log((double) 1 / temp->x);
-				//		printf("x %d y %d logx %f logpk %f\n", temp->x, temp->y, log(1/temp->x), log(pk));
+            fprintf(gnuplotPipe, "\nplot '-' \n");
+            Data *temp = freqHead;
+            while (temp != NULL) {
+                //		printf("\nDegree : %d Nodes %d",temp->x, temp->y);
+                double pk = (double) temp->y / count;
+                double x = log((double) 1 / temp->x);
+                //		printf("x %d y %d logx %f logpk %f\n", temp->x, temp->y, log(1/temp->x), log(pk));
 
-				//		fprintf(gnuplotPipe, "%f %f\n", log2((double)1/temp->x), log2(pk));
-				//		fprintf(gnuplotPipe, "%d %f\n", temp->x, pk);
+                //		fprintf(gnuplotPipe, "%f %f\n", log2((double)1/temp->x), log2(pk));
+                //		fprintf(gnuplotPipe, "%d %f\n", temp->x, pk);
 
-				if(choice==1)
-					fprintf(gnuplotPipe, "%lf %lf\n", x, log(pk));
-				else
-					fprintf(gnuplotPipe, "%d %lf\n", temp->x, log(pk));
+                if(choice==1)
+                    fprintf(gnuplotPipe, "%lf %lf\n", x, log(pk));
+                else
+                    fprintf(gnuplotPipe, "%d %lf\n", temp->x, log(pk));
 
-				temp = temp->next;
-			}
-			fprintf(gnuplotPipe, "e");
-			fclose(gnuplotPipe);
-		}
-	}
+                temp = temp->next;
+            }
+            fprintf(gnuplotPipe, "e");
+            fclose(gnuplotPipe);
+        }
+    }
 	freeData(freqHead);
 	//	fprintf(gnuplotPipe, " with lines");
-}
-
-#define NUM_THREADS 4
-
-void divideAndCalcVis(Bar *head, long long count){
-	long long parts[NUM_THREADS];
-	int j = 0;
-	double percen = .1;
-	long long tocount = 0;
-	for(j = 0;j<NUM_THREADS-1;j++){
-		parts[j] = (long long)count*percen;
-		percen += .1;
-		tocount += parts[j];
-	}
-	parts[NUM_THREADS-1] = count - tocount;
-
-	pthread_t threads[NUM_THREADS];
-	int created = 0;
-	long long i = 0;
-	Bar *temp = head;
-	do
-	{
-		if(created==0 || i==parts[created]){
-			Calcinfo *info = (Calcinfo *)malloc(sizeof(Calcinfo));
-			info->start = temp;
-			info->count = count;
-			info->upto = parts[created];
-			info->tid = created;
-
-			int rc = pthread_create(&threads[created], NULL, &calculateVisibility, info);
-			if(rc){
-				printf("\nError : Unable to create a new thread(code %d)!", rc);
-				continue;
-			}
-			else{
-				printf("\nThread started : Thread %d(values %lld)", created, parts[created]);
-				i = 0;
-				created++;
-			}
-		}
-		if(temp!=NULL)
-			temp = temp->next;
-		i++;
-	}
-	while(created<NUM_THREADS);
-	created = 0;
-	while(created<NUM_THREADS){
-		void *status;
-		int r;
-		r = pthread_join(threads[created], &status);
-		printf("\nThread complete : Thread %d(Status %ld)", created, (long)status);
-		created++;
-	}
 }
 
 void generateRandomAndTest(int);
@@ -338,7 +276,7 @@ int main(int argc, char *argv[]){
 
 	printf("\nCalculating visibility..");
 	timer = clock();
-	divideAndCalcVis(start, count);
+	calculateVisibility(start, count);
 	seconds = getDiff(timer);
 	printf("\rVisibility calculated (%g seconds)..", seconds);
 
@@ -348,7 +286,7 @@ int main(int argc, char *argv[]){
 	seconds = getDiff(timer);
 	printf("\rWriting completed (%g seconds)..", seconds);
 
-	printf("\nPreparing graphs..");
+    printf("\nPreparing graphs..");
 	plot(start, count);
 
 	printf("\nReleasing memory..");
