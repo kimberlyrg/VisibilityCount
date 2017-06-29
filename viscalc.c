@@ -3,57 +3,66 @@
 #include<time.h>
 #include<string.h>
 #include<math.h>
+#include"C-Thread-Pool/thpool.h"
 
 typedef struct Bar {
 	double xValue;
 	double yValue;
-	int count;
+	_Atomic int count;
 	struct Bar *next;
 } Bar;
 
-void calculateVisibility(Bar *start, long long count){
-	Bar *present = start;
-	long long c = 0;
-	int prevpercn = 0;
-	while(present!=NULL){
-		Bar *target = present->next;
-		double ta = present->xValue;
-		double ya = present->yValue;
+void checkVisibility(Bar *present, Bar *target, double *tc, double *yc){
 
-		double tc = present->xValue;
-		double yc = present->yValue;
-		while(target!=NULL){
-			if(target==present->next){
-				present->count++;
-				target->count++;
-				tc = target->xValue;
-				yc = target->yValue;
+	double ta = present->xValue;
+	double ya = present->yValue;
+
+	if(target==present->next){
+		present->count++;
+		target->count++;
+		*tc = target->xValue;
+		*yc = target->yValue;
+	}
+	else{
+		double tb = target->xValue;
+		double yb = target->yValue;
+		double div = ((ya - yb) * ((tb - *tc) / (tb - ta))) + yb;
+
+		if(*yc < div){
+			present->count++;
+			target->count++;
+
+			if(yb > *yc){
+				*tc = target->xValue;
+				*yc = target->yValue;
 			}
-			else{
-				double tb = target->xValue;
-				double yb = target->yValue;
-				double div = ((ya - yb) * ((tb - tc) / (tb - ta))) + yb;
 
-				if(yc < div){
-					present->count++;
-					target->count++;
-
-					if(yb > yc){
-						tc = target->xValue;
-						yc = target->yValue;
-					}
-
-				}
-			}
-			target = target->next;	
-		}
-		present = present->next;
-		int percn = ((++c)*100)/count;
-		if(percn!=prevpercn){
-			printf("\rCalculating visibility (%d%% complete)..", percn);
-			prevpercn = percn;
 		}
 	}
+
+}
+
+void checkVisibilityForBar(void *pre){
+	Bar *present = (Bar *)pre;
+	Bar *target = present->next;
+
+	double tc = present->xValue;
+	double yc = present->yValue;
+	while(target!=NULL){
+		checkVisibility(present, target, &tc, &yc);
+		target = target->next;	
+	}
+}
+
+void calculateVisibility(Bar *start, long long count){
+	Bar *present = start;
+	threadpool pool = thpool_init(4);
+	while(present!=NULL){
+		thpool_add_work(pool, checkVisibilityForBar, (void *)present);
+		present = present->next;
+	}
+	thpool_wait(pool);
+	thpool_destroy(pool);
 }
 
 
@@ -125,7 +134,7 @@ void freeBars(Bar *head){
 }
 
 void sortList(Bar *list){
-    printf("\rPreparing graphs (sorting data)..");
+	printf("\rPreparing graphs (sorting data)..");
 	Bar *temp = list;
 	while(temp->next!=NULL){
 		Bar *t2 = temp->next;
@@ -156,7 +165,7 @@ typedef struct Data{
 } Data;
 
 void calculateVisibilityFrequency(Bar *head, Data **dataHead){
-    printf("\rPreparing graphs (calculating frequency)..");
+	printf("\rPreparing graphs (calculating frequency)..");
 	Bar *temp = head;
 	Data * newHead = NULL, *prev = NULL, *aVal = NULL;
 	while(temp!=NULL){
@@ -190,62 +199,62 @@ void freeData(Data *head){
 
 
 double getDiff(clock_t start){
-    return ((double) (clock() - start)) / CLOCKS_PER_SEC;
+	return ((double) (clock() - start)) / CLOCKS_PER_SEC;
 }
 
 void plot(Bar *head, long long count){
-    clock_t start = clock();
+	clock_t start = clock();
 	sortList(head);
 	Data *freqHead;
 	calculateVisibilityFrequency(head, &freqHead);
-    printf("\rGraphs prepared (%g seconds)..                   ", getDiff(start));
-    int choice = 1;
+	printf("\rGraphs prepared (%g seconds)..                   ", getDiff(start));
+	int choice = 1;
 
-    while(choice>0 && choice<3) {
-        printf("\nSelect the graph you want to view : ");
-        printf("\n1. log(Pk) vs log(1/k)");
-        printf("\n2. log(Pk) vs k");
-        printf("\nYour choice : ");
-        scanf("%d", &choice);
+	while(choice>0 && choice<3) {
+		printf("\nSelect the graph you want to view : ");
+		printf("\n1. log(Pk) vs log(1/k)");
+		printf("\n2. log(Pk) vs k");
+		printf("\nYour choice : ");
+		scanf("%d", &choice);
 
-        if (choice == 1 || choice == 2) {
+		if (choice == 1 || choice == 2) {
 #ifdef WIN32
-            FILE *gnuplotPipe = _popen("gnuplot -p", "w");
+			FILE *gnuplotPipe = _popen("gnuplot -p", "w");
 #else
-            FILE * gnuplotPipe = popen("gnuplot -p", "w");
+			FILE * gnuplotPipe = popen("gnuplot -p", "w");
 #endif
-            fprintf(gnuplotPipe, "set ylabel \"log(Pk)\"");
-            if(choice==1) {
-                fprintf(gnuplotPipe, "\nset xlabel \"log(1/k)\"");
-                fprintf(gnuplotPipe, "\nset title \"log(Pk) vs log(1/k)\"");
-            }
-            else {
-                fprintf(gnuplotPipe, "\nset xlabel \"k\"");
-                fprintf(gnuplotPipe, "\nset title \"log(Pk) vs k\"");
-            }
+			fprintf(gnuplotPipe, "set ylabel \"log(Pk)\"");
+			if(choice==1) {
+				fprintf(gnuplotPipe, "\nset xlabel \"log(1/k)\"");
+				fprintf(gnuplotPipe, "\nset title \"log(Pk) vs log(1/k)\"");
+			}
+			else {
+				fprintf(gnuplotPipe, "\nset xlabel \"k\"");
+				fprintf(gnuplotPipe, "\nset title \"log(Pk) vs k\"");
+			}
 
-            fprintf(gnuplotPipe, "\nplot '-' \n");
-            Data *temp = freqHead;
-            while (temp != NULL) {
-                //		printf("\nDegree : %d Nodes %d",temp->x, temp->y);
-                double pk = (double) temp->y / count;
-                double x = log((double) 1 / temp->x);
-                //		printf("x %d y %d logx %f logpk %f\n", temp->x, temp->y, log(1/temp->x), log(pk));
+			fprintf(gnuplotPipe, "\nplot '-' \n");
+			Data *temp = freqHead;
+			while (temp != NULL) {
+				//		printf("\nDegree : %d Nodes %d",temp->x, temp->y);
+				double pk = (double) temp->y / count;
+				double x = log((double) 1 / temp->x);
+				//		printf("x %d y %d logx %f logpk %f\n", temp->x, temp->y, log(1/temp->x), log(pk));
 
-                //		fprintf(gnuplotPipe, "%f %f\n", log2((double)1/temp->x), log2(pk));
-                //		fprintf(gnuplotPipe, "%d %f\n", temp->x, pk);
+				//		fprintf(gnuplotPipe, "%f %f\n", log2((double)1/temp->x), log2(pk));
+				//		fprintf(gnuplotPipe, "%d %f\n", temp->x, pk);
 
-                if(choice==1)
-                    fprintf(gnuplotPipe, "%lf %lf\n", x, log(pk));
-                else
-                    fprintf(gnuplotPipe, "%d %lf\n", temp->x, log(pk));
+				if(choice==1)
+					fprintf(gnuplotPipe, "%lf %lf\n", x, log(pk));
+				else
+					fprintf(gnuplotPipe, "%d %lf\n", temp->x, log(pk));
 
-                temp = temp->next;
-            }
-            fprintf(gnuplotPipe, "e");
-            fclose(gnuplotPipe);
-        }
-    }
+				temp = temp->next;
+			}
+			fprintf(gnuplotPipe, "e");
+			fclose(gnuplotPipe);
+		}
+	}
 	freeData(freqHead);
 	//	fprintf(gnuplotPipe, " with lines");
 }
@@ -254,6 +263,7 @@ void generateRandomAndTest(int);
 
 int main(int argc, char *argv[]){
 	clock_t timer;
+	time_t starter, end;
 	double seconds;
 	if((argc!=3 && argc!=4) || (argc==4 && strcmp(argv[3], "randomtest")!=0) ){
 		printf("\nError : Wrong number of inputs!");
@@ -269,24 +279,30 @@ int main(int argc, char *argv[]){
 	printf("\nReading file..");
 	Bar *start;
 	long long count = 0;
+	time(&starter);
 	timer = clock();
 	readFromFile(&start, argv[1], &count);
 	seconds = getDiff(timer);
-	printf("\rReading completed (%g seconds)..", seconds);
+	time(&end);
+	printf("\rReading completed (Execution time : %g seconds, CPU time : %g seconds)..", difftime(end, starter),seconds);
 
 	printf("\nCalculating visibility..");
+	time(&starter);
 	timer = clock();
 	calculateVisibility(start, count);
 	seconds = getDiff(timer);
-	printf("\rVisibility calculated (%g seconds)..", seconds);
+	time(&end);
+	printf("\rVisibility calculated (Execution time : %g seconds, CPU time : %g seconds)..", difftime(end, starter), seconds);
 
 	printf("\nWriting out to file..");
+	time(&starter);
 	timer = clock();
 	writeToFile(start, argv[2]);
 	seconds = getDiff(timer);
-	printf("\rWriting completed (%g seconds)..", seconds);
+	time(&end);
+	printf("\rWriting completed (Execution time : %g seconds, CPU time : %g seconds)..", difftime(end, starter), seconds);
 
-    printf("\nPreparing graphs..");
+	printf("\nPreparing graphs..");
 	plot(start, count);
 
 	printf("\nReleasing memory..");
