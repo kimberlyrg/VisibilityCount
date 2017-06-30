@@ -133,7 +133,7 @@ void sortList(Bar *list){
 			if(temp->count>t2->count){
 				double x = temp->xValue;
 				double y = temp->yValue;
-				double c = temp->count;
+				int c = temp->count;
 
 				temp->xValue = t2->xValue;
 				temp->yValue = t2->yValue;
@@ -150,8 +150,8 @@ void sortList(Bar *list){
 }
 
 typedef struct Data{
-	int x;
-	int y;
+	int degree;
+	int count;
 	struct Data * next;
 } Data;
 
@@ -161,13 +161,13 @@ void calculateVisibilityFrequency(Bar *head, Data **dataHead){
 	Data * newHead = NULL, *prev = NULL, *aVal = NULL;
 	while(temp!=NULL){
 		aVal = (Data *)malloc(sizeof(Data));
-		aVal->x = temp->count;
-		aVal->y = 1;
+		aVal->degree = temp->count;
+		aVal->count = 1;
 		aVal->next = NULL;
 		Bar *temp2 = temp->next;
 		while(temp2!=NULL && temp2->count==temp->count){
 			temp2 = temp2->next;
-			aVal->y = aVal->y+1;
+			aVal->count = aVal->count+1;
 		}
 		temp = temp2;
 
@@ -178,6 +178,12 @@ void calculateVisibilityFrequency(Bar *head, Data **dataHead){
 		prev = aVal;
 	}
 	(*dataHead) = newHead;
+/*	Data *temp1 = newHead;
+	while(temp1!=NULL){
+		printf("\nDegree %d Nk %d", temp1->degree, temp1->count);
+		temp1 = temp1->next;
+	}
+ */
 }
 
 void freeData(Data *head){
@@ -193,7 +199,7 @@ double getDiff(clock_t start){
     return ((double) (clock() - start)) / CLOCKS_PER_SEC;
 }
 
-void plot(Bar *head, long long count){
+void plot(Bar *head, long long totalCount){
     clock_t start = clock();
 	sortList(head);
 	Data *freqHead;
@@ -201,45 +207,57 @@ void plot(Bar *head, long long count){
     printf("\rGraphs prepared (%g seconds)..                   ", getDiff(start));
     int choice = 1;
 
-    while(choice>0 && choice<3) {
+    while(choice>0 && choice<4) {
         printf("\nSelect the graph you want to view : ");
         printf("\n1. log(Pk) vs log(1/k)");
         printf("\n2. log(Pk) vs k");
+        printf("\n3. log(Pk) vs log(k)");
         printf("\nYour choice : ");
         scanf("%d", &choice);
 
-        if (choice == 1 || choice == 2) {
+        if (choice == 1 || choice == 2 || choice==3) {
 #ifdef WIN32
             FILE *gnuplotPipe = _popen("gnuplot -p", "w");
 #else
             FILE * gnuplotPipe = popen("gnuplot -p", "w");
 #endif
-            fprintf(gnuplotPipe, "set ylabel \"log(Pk)\"");
             if(choice==1) {
+                fprintf(gnuplotPipe, "set ylabel \"log(Pk)\"");
                 fprintf(gnuplotPipe, "\nset xlabel \"log(1/k)\"");
                 fprintf(gnuplotPipe, "\nset title \"log(Pk) vs log(1/k)\"");
             }
-            else {
+            else if(choice==2) {
+                fprintf(gnuplotPipe, "set ylabel \"log(Pk)\"");
                 fprintf(gnuplotPipe, "\nset xlabel \"k\"");
                 fprintf(gnuplotPipe, "\nset title \"log(Pk) vs k\"");
+            }
+            else{
+                fprintf(gnuplotPipe, "set ylabel \"log(Pk)\"");
+                fprintf(gnuplotPipe, "\nset xlabel \"log(k)\"");
+                fprintf(gnuplotPipe, "\nset title \"log(Pk) vs log(k)\"");
             }
 
             fprintf(gnuplotPipe, "\nplot '-' \n");
             Data *temp = freqHead;
             while (temp != NULL) {
-                //		printf("\nDegree : %d Nodes %d",temp->x, temp->y);
-                double pk = (double) temp->y / count;
-                double x = log((double) 1 / temp->x);
-                //		printf("x %d y %d logx %f logpk %f\n", temp->x, temp->y, log(1/temp->x), log(pk));
+				if(temp->degree>=10) {
+					//		printf("\nDegree : %d Nodes %d",temp->degree, temp->totalCount);
+					float pk = (float) temp->count / totalCount;
+					float x = log10f((float) 1 / temp->degree);
+					float logk = log10f(temp->degree);
+					float logpk = log10f(pk);
+				//	printf("k %d Nk %d pk %g logk %g logpk %g\n", temp->degree, temp->count, pk, logk, logpk);
+				//	fflush(stdin);
+					//		fprintf(gnuplotPipe, "%f %f\n", log2((double)1/temp->degree), log2(pk));
+					//		fprintf(gnuplotPipe, "%d %f\n", temp->degree, pk);
 
-                //		fprintf(gnuplotPipe, "%f %f\n", log2((double)1/temp->x), log2(pk));
-                //		fprintf(gnuplotPipe, "%d %f\n", temp->x, pk);
-
-                if(choice==1)
-                    fprintf(gnuplotPipe, "%lf %lf\n", x, log(pk));
-                else
-                    fprintf(gnuplotPipe, "%d %lf\n", temp->x, log(pk));
-
+					if (choice == 1)
+						fprintf(gnuplotPipe, "%g %g\n", x, logpk);
+					else if (choice == 2)
+						fprintf(gnuplotPipe, "%d %g\n", temp->degree, logpk);
+					else
+						fprintf(gnuplotPipe, "%g %g\n", logk, logpk);
+				}
                 temp = temp->next;
             }
             fprintf(gnuplotPipe, "e");
@@ -247,7 +265,6 @@ void plot(Bar *head, long long count){
         }
     }
 	freeData(freqHead);
-	//	fprintf(gnuplotPipe, " with lines");
 }
 
 void generateRandomAndTest(int);
@@ -316,7 +333,7 @@ void generateRandomAndTest(int count){
 	while(i<count){
 		int ri = rand()%1000000;
 		double rf = ri + ((double)rand()/(double)RAND_MAX);
-		fprintf(f, "%g\n", rf);
+		fprintf(f, "%lf\n", rf);
 		i++;
 	}
 	fclose(f);
