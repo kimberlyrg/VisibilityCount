@@ -1,17 +1,15 @@
 #include"bar.h"
 
 Bar* SortedMerge(Bar* a, Bar* b);
-void FrontBackSplit(Bar* source,
-          Bar** frontRef, Bar** backRef);
+void FrontBackSplit(Bar* source, Bar** frontRef, Bar** backRef);
 
 void mergesort_Bar(Bar **headRef){
 	Bar* head = *headRef;
-	Bar* a;
-	Bar* b;
+	Bar* a = NULL;
+	Bar* b = NULL;
 
 	/* Base case -- length 0 or 1 */
-	if ((head == NULL) || (head->next == NULL))
-	{
+	if ((head == NULL) || (head->next == NULL)){
 		return;
 	}
 
@@ -26,8 +24,7 @@ void mergesort_Bar(Bar **headRef){
 	*headRef = SortedMerge(a, b);
 }
 
-Bar* SortedMerge(Bar* a, Bar* b)
-{
+Bar* SortedMerge(Bar* a, Bar* b){
 	Bar* result = NULL;
 
 	/* Base cases */
@@ -37,41 +34,33 @@ Bar* SortedMerge(Bar* a, Bar* b)
 		return(a);
 
 	/* Pick either a or b, and recur */
-	if (a->count <= b->count)
-	{
+	if (a->count <= b->count){
 		result = a;
 		result->next = SortedMerge(a->next, b);
 	}
-	else
-	{
+	else{
 		result = b;
 		result->next = SortedMerge(a, b->next);
 	}
 	return(result);
 }
 
-void FrontBackSplit(Bar* source,
-		Bar** frontRef, Bar** backRef)
-{
-	Bar* fast;
-	Bar* slow;
-	if (source==NULL || source->next==NULL)
-	{
+void FrontBackSplit(Bar* source, Bar** frontRef, Bar** backRef){
+	Bar* fast = NULL;
+	Bar* slow = NULL;
+	if (source==NULL || source->next==NULL){
 		/* length < 2 cases */
 		*frontRef = source;
 		*backRef = NULL;
 	}
-	else
-	{
+	else{
 		slow = source;
 		fast = source->next;
 
 		/* Advance 'fast' two nodes, and advance 'slow' one node */
-		while (fast != NULL)
-		{
+		while (fast != NULL){
 			fast = fast->next;
-			if (fast != NULL)
-			{
+			if (fast != NULL){
 				slow = slow->next;
 				fast = fast->next;
 			}
@@ -84,4 +73,3 @@ void FrontBackSplit(Bar* source,
 		slow->next = NULL;
 	}
 }
-
