@@ -45,7 +45,7 @@ void calculateVisibility(Bar *start, long long count){
 
 				}
 			}
-			target = target->next;	
+			target = target->next;
 		}
 		present = present->next;
 		int percn = ((++c)*100)/count;
@@ -105,7 +105,7 @@ void writeToFile(Bar *start, char *fileName){
 	}
 	int count = 1;
 	while(start!=NULL){
-		fprintf(f, "Bar : %3d\tValue : %12.6f\tNodes : %3d\n", count, start->yValue, start->count);
+		fprintf(f, "Bar : %3d\tValue : %12.6f\tDegree : %3d\n", count, start->yValue, start->count);
 		start = start->next;
 		count++;
 	}
@@ -113,7 +113,7 @@ void writeToFile(Bar *start, char *fileName){
 }
 
 void printUsage(){
-	printf("\nUsage : viscalc input_file output_file\n");
+	printf("\n CHECK PROGRAM ARGUMENTS\n");
 }
 
 void freeBars(Bar *head){
@@ -123,9 +123,8 @@ void freeBars(Bar *head){
 		free(backup);
 	}
 }
-
 void sortList(Bar *list){
-    printf("\rPreparing graphs (sorting data)..");
+	printf("\rPreparing graphs (sorting data)..");
 	Bar *temp = list;
 	while(temp->next!=NULL){
 		Bar *t2 = temp->next;
@@ -134,11 +133,9 @@ void sortList(Bar *list){
 				double x = temp->xValue;
 				double y = temp->yValue;
 				int c = temp->count;
-
 				temp->xValue = t2->xValue;
 				temp->yValue = t2->yValue;
 				temp->count = t2->count;
-
 				t2->xValue = x;
 				t2->yValue = y;
 				t2->count = c;
@@ -148,7 +145,6 @@ void sortList(Bar *list){
 		temp = temp->next;
 	}
 }
-
 typedef struct Data{
 	int degree;
 	int count;
@@ -156,7 +152,7 @@ typedef struct Data{
 } Data;
 
 void calculateVisibilityFrequency(Bar *head, Data **dataHead){
-    printf("\rPreparing graphs (calculating frequency)..");
+	printf("\rPreparing graphs (calculating frequency)..");
 	Bar *temp = head;
 	Data * newHead = NULL, *prev = NULL, *aVal = NULL;
 	while(temp!=NULL){
@@ -178,12 +174,6 @@ void calculateVisibilityFrequency(Bar *head, Data **dataHead){
 		prev = aVal;
 	}
 	(*dataHead) = newHead;
-/*	Data *temp1 = newHead;
-	while(temp1!=NULL){
-		printf("\nDegree %d Nk %d", temp1->degree, temp1->count);
-		temp1 = temp1->next;
-	}
- */
 }
 
 void freeData(Data *head){
@@ -196,78 +186,73 @@ void freeData(Data *head){
 
 
 double getDiff(clock_t start){
-    return ((double) (clock() - start)) / CLOCKS_PER_SEC;
+	return ((double) (clock() - start)) / CLOCKS_PER_SEC;
 }
 
 void plot(Bar *head, long long totalCount){
-    clock_t start = clock();
+	clock_t start = clock();
 	sortList(head);
 	Data *freqHead;
 	calculateVisibilityFrequency(head, &freqHead);
-    printf("\rGraphs prepared (%g seconds)..                   ", getDiff(start));
-    int choice = 1;
-
-    while(choice>0 && choice<4) {
-        printf("\nSelect the graph you want to view : ");
-        printf("\n1. log(Pk) vs log(1/k)");
-        printf("\n2. log(Pk) vs k");
-        printf("\n3. log(Pk) vs log(k)");
-        printf("\nYour choice : ");
-        scanf("%d", &choice);
-
-        if (choice == 1 || choice == 2 || choice==3) {
+	printf("\rGraphs prepared (%g seconds)..                   ", getDiff(start));
+	char choice = '1';
+	while(choice>'0' && choice<'4') {
+		printf("\nSelect the graph you want to view : ");
+		printf("\n1. log(Pk) vs log(1/k)");
+		printf("\n2. log(Pk) vs k");
+		printf("\n3. Pk vs k");
+		printf("\nYour choice : ");
+		scanf(" %c", &choice);
+		if (choice == '1' || choice == '2' || choice == '3') {
 #ifdef WIN32
-            FILE *gnuplotPipe = _popen("gnuplot -p", "w");
+			FILE *gnuplotPipe = _popen("gnuplot -p", "w");
 #else
-            FILE * gnuplotPipe = popen("gnuplot -p", "w");
+			FILE * gnuplotPipe = popen("gnuplot -p", "w");
 #endif
-            if(choice==1) {
-                fprintf(gnuplotPipe, "set ylabel \"log(Pk)\"");
-                fprintf(gnuplotPipe, "\nset xlabel \"log(1/k)\"");
-                fprintf(gnuplotPipe, "\nset title \"log(Pk) vs log(1/k)\"");
-            }
-            else if(choice==2) {
-                fprintf(gnuplotPipe, "set ylabel \"log(Pk)\"");
-                fprintf(gnuplotPipe, "\nset xlabel \"k\"");
-                fprintf(gnuplotPipe, "\nset title \"log(Pk) vs k\"");
-            }
-            else{
-                fprintf(gnuplotPipe, "set ylabel \"log(Pk)\"");
-                fprintf(gnuplotPipe, "\nset xlabel \"log(k)\"");
-                fprintf(gnuplotPipe, "\nset title \"log(Pk) vs log(k)\"");
-            }
-
-            fprintf(gnuplotPipe, "\nplot '-' \n");
-            Data *temp = freqHead;
-            while (temp != NULL) {
-				if(temp->degree>=10) {
-					//		printf("\nDegree : %d Nodes %d",temp->degree, temp->totalCount);
+			if(choice=='1') {
+				fprintf(gnuplotPipe, "set ylabel \"log(Pk)\"");
+				fprintf(gnuplotPipe, "\nset xlabel \"log(1/k)\"");
+				fprintf(gnuplotPipe, "\nset title \"log(Pk) vs log(1/k)\"");
+			}
+			else if(choice=='2') {
+				fprintf(gnuplotPipe, "set ylabel \"log(Pk)\"");
+				fprintf(gnuplotPipe, "\nset xlabel \"k\"");
+				fprintf(gnuplotPipe, "\nset title \"log(Pk) vs k\"");
+			}
+			else{
+				fprintf(gnuplotPipe, "set ylabel \"Pk\"");
+				fprintf(gnuplotPipe, "\nset xlabel \"k\"");
+				fprintf(gnuplotPipe, "\nset title \"Pk vs k\"");
+			}
+			fprintf(gnuplotPipe, "\nplot '-' \n");
+			Data *temp = freqHead;
+			while (temp != NULL) {
+				if(temp->degree>=6){
 					float pk = (float) temp->count / totalCount;
-					float x = log10f((float) 1 / temp->degree);
-					float logk = log10f(temp->degree);
-					float logpk = log10f(pk);
-				//	printf("k %d Nk %d pk %g logk %g logpk %g\n", temp->degree, temp->count, pk, logk, logpk);
-				//	fflush(stdin);
-					//		fprintf(gnuplotPipe, "%f %f\n", log2((double)1/temp->degree), log2(pk));
-					//		fprintf(gnuplotPipe, "%d %f\n", temp->degree, pk);
+					if(pk>0.001){
+						float x = log10f((float) 1 / temp->degree);
+						float logk = log10f(temp->degree);
+						float logpk = log10f(pk);
 
-					if (choice == 1)
-						fprintf(gnuplotPipe, "%g %g\n", x, logpk);
-					else if (choice == 2)
-						fprintf(gnuplotPipe, "%d %g\n", temp->degree, logpk);
-					else
-						fprintf(gnuplotPipe, "%g %g\n", logk, logpk);
+						if (choice == '1')
+							fprintf(gnuplotPipe, "%g %g\n", x, logpk);
+						else if (choice == '2')
+							fprintf(gnuplotPipe, "%d %g\n", temp->degree, logpk);
+						else
+							fprintf(gnuplotPipe, "%d %g\n", temp->degree, pk);
+					}
 				}
-                temp = temp->next;
-            }
-            fprintf(gnuplotPipe, "e");
-            fclose(gnuplotPipe);
-        }
-    }
+				temp = temp->next;
+			}
+			fprintf(gnuplotPipe, "e");
+			fclose(gnuplotPipe);
+		}
+	}
 	freeData(freqHead);
 }
 
 void generateRandomAndTest(int);
+void generateFractalAndTest(int);
 
 int main(int argc, char *argv[]){
 	clock_t timer;
@@ -277,10 +262,25 @@ int main(int argc, char *argv[]){
 		printUsage();
 		return 1;
 	}
-	if(strcmp(argv[1], "test")==0){
-		printf("\nGenerating %d random input values..", atoi(argv[2]));
-		generateRandomAndTest(atoi(argv[2]));
-		return 0;
+	if(strcmp(argv[1], "testrandom")==0 || strcmp(argv[1],"testfractal")==0)
+	{
+		if(atoi(argv[2])>=3)
+		{
+			if(strcmp(argv[1], "testrandom")==0){
+				printf("\nGenerating %d random input values..", atoi(argv[2]));
+				generateRandomAndTest(atoi(argv[2]));
+			}
+			else{
+				printf("\nGenerating fractal input values upto %d..", atoi(argv[2]));
+				generateFractalAndTest(atoi(argv[2]));
+			}
+			return 0;
+		}
+		else
+		{
+			printf("\nTestdata should not be less than 3");
+			exit(0);
+		}
 	}
 	setbuf(stdout, NULL);
 	printf("\nReading file..");
@@ -302,28 +302,77 @@ int main(int argc, char *argv[]){
 	writeToFile(start, argv[2]);
 	seconds = getDiff(timer);
 	printf("\rWriting completed (%g seconds)..", seconds);
-
-    printf("\nPreparing graphs..");
+	printf("\nPreparing graphs..");
 	plot(start, count);
-
 	printf("\nReleasing memory..");
 	freeBars(start);
-
 	if(argc==4){
 		printf("\nDeleting random input file..");
 		if(remove(argv[1]))
 			printf("\nWarning : Unable to delete random input file!");
 	}
-
 	printf("\nCompleted successfully!\n");
+	return 0;
 }
 
-
-void generateRandomAndTest(int count){
+char * generateRandomFileName(int isRandom){
 	srand((unsigned int)time(NULL));
 	char buff[28];
 	time_t now = time(NULL);
-	strftime(buff, 28, "rndinpt_%Y%m%d_%H%M%S", localtime(&now));
+	if(isRandom)
+		strftime(buff, 28, "rndinpt_%Y%m%d_%H%M%S", localtime(&now));
+	else
+		strftime(buff, 28, "fractinpt_%Y%m%d_%H%M%S", localtime(&now));
+	return strdup(buff);
+}
+
+void callMain(char *input, int isRand){
+	char* args[4];
+	args[0] = strdup("viscalc");
+	printf("\n%s",input);
+	args[1] = strdup(input);
+	if(isRand)
+		args[2] = strdup("testoutput_random.txt");
+	else
+		args[2] = strdup("testoutput_fractal.txt");
+	args[3] = strdup("randomtest");
+	main(4, args);
+}
+
+void generateFractalAndTest(int upto){
+	int i = upto;
+	int count = 0;
+	int j = 1;
+	int c = 1;
+	int prev = 0;
+	char *buff = generateRandomFileName(0);
+	FILE *f = fopen(buff,"w");
+	if(f==NULL){
+		printf("Error : Unable to generate fractal input!");
+		exit(2);
+	}
+	while(j<=i){
+		int k = 1;
+		while(k<=j*j){
+			fprintf(f,"%d\n",k*k);
+			k++;
+		}
+		j++;
+	}
+	/*
+	   while(count<i){
+	   j = (prev*prev) + c;
+	   fprintf(f,"%d\n",j);
+	   prev = j;
+	   count++;
+	   }
+	   */
+	fclose(f);
+	callMain(buff, 0);
+}
+
+void generateRandomAndTest(int count){
+	char *buff = generateRandomFileName(1);
 	FILE *f = fopen(buff, "w");
 	if(f==NULL){
 		printf("\nError : Unable to generate random input file!");
@@ -337,10 +386,5 @@ void generateRandomAndTest(int count){
 		i++;
 	}
 	fclose(f);
-	char* args[4];
-	args[0] = strdup("viscalc");
-	args[1] = strdup(buff);
-	args[2] = strdup("testoutput.txt");
-	args[3] = strdup("randomtest");
-	main(4, args);
+	callMain(buff, 1);
 }
