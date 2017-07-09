@@ -4,13 +4,8 @@
 #include<string.h>
 #include<math.h>
 #include"C-Thread-Pool/thpool.h"
-
-typedef struct Bar {
-	double xValue;
-	double yValue;
-	_Atomic int count;
-	struct Bar *next;
-} Bar;
+#include"bar.h"
+#include"mergesort.c"
 
 void checkVisibility(Bar *present, Bar *target, double *tc, double *yc){
 
@@ -204,7 +199,8 @@ double getDiff(clock_t start){
 
 void plot(Bar *head, long long count){
 	clock_t start = clock();
-	sortList(head);
+	//sortList(head);
+	mergesort_Bar(&head);
 	Data *freqHead;
 	calculateVisibilityFrequency(head, &freqHead);
 	printf("\rGraphs prepared (%g seconds)..                   ", getDiff(start));
