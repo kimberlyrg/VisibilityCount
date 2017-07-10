@@ -272,6 +272,9 @@ int main(int argc, char *argv[]){
 			}
 			else{
 				printf("\nGenerating fractal input values upto %d..", atoi(argv[2]));
+				if(atoi(argv[2])>50){
+					printf("\nWarning : Huge number of values are to be generated!\n");
+				}
 				generateFractalAndTest(atoi(argv[2]));
 			}
 			return 0;
@@ -329,7 +332,6 @@ char * generateRandomFileName(int isRandom){
 void callMain(char *input, int isRand){
 	char* args[4];
 	args[0] = strdup("viscalc");
-	printf("\n%s",input);
 	args[1] = strdup(input);
 	if(isRand)
 		args[2] = strdup("testoutput_random.txt");
