@@ -197,7 +197,7 @@ void plot(Bar *head, long long count){
 	clock_t start = clock();
 	long long totalCount = count;
 	//sortList(head);
-	mergesort_Bar(&head);
+	mergesort(&head);
 	Data *freqHead;
 	calculateVisibilityFrequency(head, &freqHead);
 	printf("\rGraphs prepared (%g seconds)..                   ", getDiff(start));
