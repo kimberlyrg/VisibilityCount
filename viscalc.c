@@ -220,8 +220,7 @@ Data * readFromFile(char *inputFileName, char *outputFileName){
 		printf("\nError : Unable to open input file %s!\n", inputFileName);
 		exit(1);
 	}
-	if(remove(outputFileName))
-		printf("\nWarning : Unable to remove previous output!");
+	remove(outputFileName);
 	double temp;
 	long long c = 1;
 	char line[256];
@@ -418,7 +417,7 @@ void generateRandomAndTest(int count){
 			fprintf(f, "EVENT NUMBER %d\n", eventCount++);
 		int ri = rand()%1000000;
 		double rf = ri + ((double)rand()/(double)RAND_MAX);
-		fprintf(f, "%lf\n", rf);
+		fprintf(f, "  %lf\n", rf);
 		i++;
 		totalCount++;
 	}
