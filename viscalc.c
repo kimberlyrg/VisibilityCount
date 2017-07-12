@@ -90,7 +90,6 @@ void freeBars(Bar *head){
 	}
 }
 void sortList(Bar *list){
-	printf("\rPreparing graphs (sorting data)..");
 	Bar *temp = list;
 	while(temp->next!=NULL){
 		Bar *t2 = temp->next;
@@ -119,7 +118,6 @@ typedef struct Data{
 } Data;
 
 void calculateVisibilityFrequency(Bar *head, Data **dataHead, int totalNodes){
-	printf("\rPreparing graphs (calculating frequency)..");
 	Bar *temp = head;
 	Data * newHead = NULL, *prev = NULL, *aVal = NULL;
 	while(temp!=NULL){
@@ -211,10 +209,9 @@ void plot(Data *freqHead){
 			fclose(gnuplotPipe);
 		}
 	}
-	freeData(freqHead);
 }
 
-Data * readFromFile(char *inputFileName, char *outputFileName){
+void readFromFile(char *inputFileName, char *outputFileName, Data **newData){
 	FILE *f = fopen(inputFileName, "rb");
 	if(f==NULL){
 		printf("\nError : Unable to open input file %s!\n", inputFileName);
@@ -226,13 +223,14 @@ Data * readFromFile(char *inputFileName, char *outputFileName){
 	char line[256];
 	Bar *finalFreqHead = NULL, *lastFreqHead = NULL; // Final plotting series
 	printf("\n");
+	int totalNodes = 0;
 	while(fgets(line, sizeof(line), f)){ // Read one line
 		printf("\rProcessing event %lld..", c);
-		if(startsWith("EVENT NUMBER", line)){ // Check if it starts with EVENT NUMBER
+		if(startsWith(" EVENT NUMBER=", line)){ // Check if it starts with EVENT NUMBER
 			int i = 0;
 			Bar *headbar = NULL, *tempbar = NULL, *prevbar = NULL; // Start creating new series
 			printf("\rProcessing event %lld (Reading data)..         ", c);
-			while(i<20){ // Process 1 value
+			while(i<19){ // Process 1 value
 				fgets(line, sizeof(line), f);
 				temp = atof(line);
 				tempbar = (Bar *)malloc(sizeof(Bar));
@@ -253,6 +251,7 @@ Data * readFromFile(char *inputFileName, char *outputFileName){
 
 				prevbar = tempbar;
 				i++;
+				totalNodes++;
 			}
 			printf("\rProcessing event %lld (Calculating visibility)..", c);
 			calculateVisibility(headbar, i); // Find the visibility of the new series
@@ -278,8 +277,6 @@ Data * readFromFile(char *inputFileName, char *outputFileName){
 				t->next = headbar;
 			}
 			lastFreqHead = headbar; // This is the last series now
-			printf("\rProcessing event %lld (Releasing memory)..      ", c);
-			//freeBars(headbar);
 			c++;
 		}
 	}
@@ -291,13 +288,11 @@ Data * readFromFile(char *inputFileName, char *outputFileName){
 	fclose(f);
 	printf("\rProcessing events (Sorting the data)..         ");
 	sortList(finalFreqHead); // Sort the new series
-	Data *newData;
 	printf("\rProcessing events (Calculating frequency)..    ");
-	calculateVisibilityFrequency(finalFreqHead, &newData, c); // Find visibility frequency of the new series
+	calculateVisibilityFrequency(finalFreqHead, newData, totalNodes); // Find visibility frequency of the new series
 	printf("\rProcessing events (Releasing memory)..         ");
 	freeBars(finalFreqHead);
-	printf("\r%lld events processed..                          ",c);
-	return newData;
+	printf("\r%lld events processed (Total nodes %d).        ",c, totalNodes);
 }
 
 void generateRandomAndTest(int);
@@ -335,7 +330,8 @@ int main(int argc, char *argv[]){
 		}
 	}
 	setbuf(stdout, NULL);
-	Data * result = readFromFile(argv[1], argv[2]);
+	Data * result;
+	readFromFile(argv[1], argv[2], &result);
 	plot(result);
 	freeData(result);
 	if(argc==4){
