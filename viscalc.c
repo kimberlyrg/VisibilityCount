@@ -48,61 +48,27 @@ void calculateVisibility(Bar *start, long long count){
 			target = target->next;
 		}
 		present = present->next;
-		int percn = ((++c)*100)/count;
-		if(percn!=prevpercn){
-			printf("\rCalculating visibility (%d%% complete)..", percn);
-			prevpercn = percn;
-		}
+//		int percn = ((++c)*100)/count;
+//		if(percn!=prevpercn){
+//			printf("\rCalculating visibility (%d%% complete)..", percn);
+//			prevpercn = percn;
+//		}
 	}
 }
 
-
-void readFromFile(Bar **start, char *fileName, long long *count){
-	FILE *f = fopen(fileName, "rb");
-	if(f==NULL){
-		printf("\nError : Unable to open input file %s!\n", fileName);
-		exit(1);
-	}
-	double temp;
-	Bar *tempbar, *prevbar = NULL;
-	long long c = 1;
-	char line[256];
-	while(fgets(line, sizeof(line), f)){
-		temp = atof(line);
-		tempbar = (Bar *)malloc(sizeof(Bar));
-		if(tempbar==NULL){
-			printf("\nError : Insufficient memory!\n");
-			fclose(f);
-			exit(2);
-		}
-		tempbar->xValue = c;
-		tempbar->yValue = temp;
-		tempbar->count = 0;
-		tempbar->next = NULL;
-
-		if(prevbar)
-			prevbar->next = tempbar;
-		else
-			(*start) = tempbar;
-
-		prevbar = tempbar;
-		c++;
-	}
-	if(!feof(f)){
-		printf("\nError : Unable to reach end of file!\n");
-		fclose(f);
-		exit(3);
-	}
-	fclose(f);
-	*count = c;
+int startsWith(const char *prefix, const char *str){
+	return strncmp(prefix, str, strlen(prefix)) == 0;
 }
 
-void writeToFile(Bar *start, char *fileName){
-	FILE *f = fopen(fileName, "w");
+
+
+void writeToFile(Bar *start, char *fileName, int eventNo){
+	FILE *f = fopen(fileName, "a");
 	if(f==NULL){
-		printf("\nError : Unable to create file!\n");
+		printf("\nError : Unable to create or open file!\n");
 		exit(1);
 	}
+	fprintf(f, "\nEVENT NUMBER %d\n", eventNo);
 	int count = 1;
 	while(start!=NULL){
 		fprintf(f, "Bar : %3d\tValue : %12.6f\tDegree : %3d\n", count, start->yValue, start->count);
@@ -148,10 +114,11 @@ void sortList(Bar *list){
 typedef struct Data{
 	int degree;
 	int count;
+	int totalNodes;
 	struct Data * next;
 } Data;
 
-void calculateVisibilityFrequency(Bar *head, Data **dataHead){
+void calculateVisibilityFrequency(Bar *head, Data **dataHead, int totalNodes){
 	printf("\rPreparing graphs (calculating frequency)..");
 	Bar *temp = head;
 	Data * newHead = NULL, *prev = NULL, *aVal = NULL;
@@ -159,6 +126,7 @@ void calculateVisibilityFrequency(Bar *head, Data **dataHead){
 		aVal = (Data *)malloc(sizeof(Data));
 		aVal->degree = temp->count;
 		aVal->count = 1;
+		aVal->totalNodes = totalNodes;
 		aVal->next = NULL;
 		Bar *temp2 = temp->next;
 		while(temp2!=NULL && temp2->count==temp->count){
@@ -189,12 +157,7 @@ double getDiff(clock_t start){
 	return ((double) (clock() - start)) / CLOCKS_PER_SEC;
 }
 
-void plot(Bar *head, long long totalCount){
-	clock_t start = clock();
-	sortList(head);
-	Data *freqHead;
-	calculateVisibilityFrequency(head, &freqHead);
-	printf("\rGraphs prepared (%g seconds)..                   ", getDiff(start));
+void plot(Data *freqHead){
 	char choice = '1';
 	while(choice>'0' && choice<'4') {
 		printf("\nSelect the graph you want to view : ");
@@ -228,7 +191,7 @@ void plot(Bar *head, long long totalCount){
 			Data *temp = freqHead;
 			while (temp != NULL) {
 				if(temp->degree>=6){
-					float pk = (float) temp->count / totalCount;
+					float pk = (float) temp->count / temp->totalNodes;
 					if(pk>0.001){
 						float x = log10f((float) 1 / temp->degree);
 						float logk = log10f(temp->degree);
@@ -249,6 +212,90 @@ void plot(Bar *head, long long totalCount){
 		}
 	}
 	freeData(freqHead);
+}
+
+Data * readFromFile(char *inputFileName, char *outputFileName){
+	FILE *f = fopen(inputFileName, "rb");
+	if(f==NULL){
+		printf("\nError : Unable to open input file %s!\n", inputFileName);
+		exit(1);
+	}
+	if(remove(outputFileName))
+		printf("\nWarning : Unable to remove previous output!");
+	double temp;
+	long long c = 1;
+	char line[256];
+	Data *finalFreqHead = NULL, *lastFreqHead = NULL; // Final plotting series
+	printf("\n");
+	while(fgets(line, sizeof(line), f)){ // Read one line
+		printf("\rProcessing event %lld..", c);
+		if(startsWith("EVENT NUMBER", line)){ // Check if it starts with EVENT NUMBER
+			int i = 0;
+			Bar *headbar = NULL, *tempbar = NULL, *prevbar = NULL; // Start creating new series
+			printf("\rProcessing event %lld (Reading data)..         ", c);
+			while(i<20){ // Process 1 value
+				fgets(line, sizeof(line), f);
+				temp = atof(line);
+				tempbar = (Bar *)malloc(sizeof(Bar));
+				if(tempbar==NULL){
+					printf("\nError : Insufficient memory!\n");
+					fclose(f);
+					exit(2);
+				}
+				tempbar->xValue = i;
+				tempbar->yValue = temp;
+				tempbar->count = 0;
+				tempbar->next = NULL;
+
+				if(headbar)
+					prevbar->next = tempbar;
+				else
+					headbar = tempbar;
+
+				prevbar = tempbar;
+				i++;
+			}
+			printf("\rProcessing event %lld (Calculating visibility)..", c);
+			calculateVisibility(headbar, i); // Find the visibility of the new series
+			
+			/* This is where the problem is happening 
+			char *e = (char *)malloc(sizeof(char)*20);
+			printf("\rProcessing event %lld (Writing to file)..       ", c);
+			sprintf(e, "_event_%lld", c);
+			char *dup = strdup(outputFileName);
+			strcat(dup, e);
+			writeToFile(headbar, dup);
+			 Upto here */
+
+			writeToFile(headbar, outputFileName, c);
+		
+			printf("\rProcessing event %lld (Sorting the data)..      " ,c);
+			sortList(tempbar); // Sort the new series
+			Data *newData;
+			printf("\rProcessing event %lld (Calculating frequency).. ", c);
+			calculateVisibilityFrequency(headbar, &newData, c); // Find visibility frequency of the new series
+			printf("\rProcessing event %lld (Finalizing result)..     ", c);
+			if(finalFreqHead==NULL)
+				finalFreqHead = newData; // This is the first data series
+			else{ // At the data series to the tail of the last data series
+				Data *t = lastFreqHead;
+				while(t->next!=NULL)
+					t = t->next;
+				t->next = newData;
+			}
+			lastFreqHead = newData; // This is the last series now
+			printf("\rProcessing event %lld (Releasing memory)..      ", c);
+			//freeBars(headbar);
+			c++;
+		}
+	}
+	if(!feof(f)){
+		printf("\nError : Unable to reach end of file!\n");
+		fclose(f);
+		exit(3);
+	}
+	fclose(f);
+	return finalFreqHead;
 }
 
 void generateRandomAndTest(int);
@@ -286,29 +333,9 @@ int main(int argc, char *argv[]){
 		}
 	}
 	setbuf(stdout, NULL);
-	printf("\nReading file..");
-	Bar *start;
-	long long count = 0;
-	timer = clock();
-	readFromFile(&start, argv[1], &count);
-	seconds = getDiff(timer);
-	printf("\rReading completed (%g seconds)..", seconds);
-
-	printf("\nCalculating visibility..");
-	timer = clock();
-	calculateVisibility(start, count);
-	seconds = getDiff(timer);
-	printf("\rVisibility calculated (%g seconds)..", seconds);
-
-	printf("\nWriting out to file..");
-	timer = clock();
-	writeToFile(start, argv[2]);
-	seconds = getDiff(timer);
-	printf("\rWriting completed (%g seconds)..", seconds);
-	printf("\nPreparing graphs..");
-	plot(start, count);
-	printf("\nReleasing memory..");
-	freeBars(start);
+	Data * result = readFromFile(argv[1], argv[2]);
+	plot(result);
+	freeData(result);
 	if(argc==4){
 		printf("\nDeleting random input file..");
 		if(remove(argv[1]))
@@ -342,6 +369,8 @@ void callMain(char *input, int isRand){
 }
 
 void generateFractalAndTest(int upto){
+	printf("\nError : Fractaltest is a WIP!");
+	return;
 	int i = upto;
 	int count = 0;
 	int j = 1;
@@ -349,6 +378,7 @@ void generateFractalAndTest(int upto){
 	int prev = 0;
 	char *buff = generateRandomFileName(0);
 	FILE *f = fopen(buff,"w");
+	int totalCount = 0;
 	if(f==NULL){
 		printf("Error : Unable to generate fractal input!");
 		exit(2);
@@ -381,11 +411,16 @@ void generateRandomAndTest(int count){
 		exit(1);
 	}
 	int i = 0;
+	long totalCount = 0;
+	int eventCount = 1;
 	while(i<count){
+		if(totalCount%20==0)
+			fprintf(f, "EVENT NUMBER %d\n", eventCount++);
 		int ri = rand()%1000000;
 		double rf = ri + ((double)rand()/(double)RAND_MAX);
 		fprintf(f, "%lf\n", rf);
 		i++;
+		totalCount++;
 	}
 	fclose(f);
 	callMain(buff, 1);
