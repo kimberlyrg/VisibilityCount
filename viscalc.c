@@ -48,11 +48,11 @@ void calculateVisibility(Bar *start, long long count){
 			target = target->next;
 		}
 		present = present->next;
-//		int percn = ((++c)*100)/count;
-//		if(percn!=prevpercn){
-//			printf("\rCalculating visibility (%d%% complete)..", percn);
-//			prevpercn = percn;
-//		}
+		//		int percn = ((++c)*100)/count;
+		//		if(percn!=prevpercn){
+		//			printf("\rCalculating visibility (%d%% complete)..", percn);
+		//			prevpercn = percn;
+		//		}
 	}
 }
 
@@ -222,9 +222,9 @@ Data * readFromFile(char *inputFileName, char *outputFileName){
 	}
 	remove(outputFileName);
 	double temp;
-	long long c = 1;
+	long long c = 0;
 	char line[256];
-	Data *finalFreqHead = NULL, *lastFreqHead = NULL; // Final plotting series
+	Bar *finalFreqHead = NULL, *lastFreqHead = NULL; // Final plotting series
 	printf("\n");
 	while(fgets(line, sizeof(line), f)){ // Read one line
 		printf("\rProcessing event %lld..", c);
@@ -256,33 +256,28 @@ Data * readFromFile(char *inputFileName, char *outputFileName){
 			}
 			printf("\rProcessing event %lld (Calculating visibility)..", c);
 			calculateVisibility(headbar, i); // Find the visibility of the new series
-			
+
 			/* This is where the problem is happening 
-			char *e = (char *)malloc(sizeof(char)*20);
-			printf("\rProcessing event %lld (Writing to file)..       ", c);
-			sprintf(e, "_event_%lld", c);
-			char *dup = strdup(outputFileName);
-			strcat(dup, e);
-			writeToFile(headbar, dup);
-			 Upto here */
+			   char *e = (char *)malloc(sizeof(char)*20);
+			   printf("\rProcessing event %lld (Writing to file)..       ", c);
+			   sprintf(e, "_event_%lld", c);
+			   char *dup = strdup(outputFileName);
+			   strcat(dup, e);
+			   writeToFile(headbar, dup);
+			   Upto here */
 
 			writeToFile(headbar, outputFileName, c);
-		
-			printf("\rProcessing event %lld (Sorting the data)..      " ,c);
-			sortList(tempbar); // Sort the new series
-			Data *newData;
-			printf("\rProcessing event %lld (Calculating frequency).. ", c);
-			calculateVisibilityFrequency(headbar, &newData, c); // Find visibility frequency of the new series
+
 			printf("\rProcessing event %lld (Finalizing result)..     ", c);
 			if(finalFreqHead==NULL)
-				finalFreqHead = newData; // This is the first data series
+				finalFreqHead = headbar; // This is the first data series
 			else{ // At the data series to the tail of the last data series
-				Data *t = lastFreqHead;
+				Bar *t = lastFreqHead;
 				while(t->next!=NULL)
 					t = t->next;
-				t->next = newData;
+				t->next = headbar;
 			}
-			lastFreqHead = newData; // This is the last series now
+			lastFreqHead = headbar; // This is the last series now
 			printf("\rProcessing event %lld (Releasing memory)..      ", c);
 			//freeBars(headbar);
 			c++;
@@ -294,7 +289,15 @@ Data * readFromFile(char *inputFileName, char *outputFileName){
 		exit(3);
 	}
 	fclose(f);
-	return finalFreqHead;
+	printf("\rProcessing events (Sorting the data)..         ");
+	sortList(finalFreqHead); // Sort the new series
+	Data *newData;
+	printf("\rProcessing events (Calculating frequency)..    ");
+	calculateVisibilityFrequency(finalFreqHead, &newData, c); // Find visibility frequency of the new series
+	printf("\rProcessing events (Releasing memory)..         ");
+	freeBars(finalFreqHead);
+	printf("\r%lld events processed..                          ",c);
+	return newData;
 }
 
 void generateRandomAndTest(int);
